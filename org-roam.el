@@ -599,6 +599,59 @@ for Org-ref cite links."
                      target))
 
 ;;;; Updating the org-roam buffer
+(defun org-roam--buffer-insert-backlinks (file-path)
+  "Insert the backlinks for FILE-PATH into the current buffer."
+  (if-let* ((file-backlinks (org-roam--get-backlinks file-path))
+              (grouped-backlinks (--group-by (nth 0 it) file-backlinks)))
+    (progn
+      (insert (format "\n\n* %d Backlinks\n"
+                      (length file-backlinks)))
+      (dolist (group grouped-backlinks)
+        (let ((file-from (car group))
+              (bls (cdr group)))
+          (insert (format "** [[file:%s][%s]]\n"
+                          file-from
+                          (org-roam--get-title-or-slug file-from)))
+          (dolist (backlink bls)
+            (pcase-let ((`(,file-from _ ,props) backlink))
+              (insert (propertize
+                       (s-trim (s-replace "\n" " "
+                                          (plist-get props :content)))
+                       'font-lock-face 'org-roam-backlink
+                       'help-echo "mouse-1: visit backlinked note"
+                       'file-from file-from
+                       'file-from-point (plist-get props :point)))
+              (insert "\n\n"))))))
+    (insert "\n\n* No backlinks!")))
+
+(defun org-roam--buffer-insert-citelinks (file-path)
+  "Insert citation backlinks for FILE-PATH into the current buffer."
+  (if-let* ((roam-key (with-temp-buffer
+                        (insert-file-contents file-path)
+                        (org-roam--extract-ref)))
+            (key-backlinks (org-roam--get-backlinks (s-chop-prefix "cite:" roam-key)))
+            (grouped-backlinks (--group-by (nth 0 it) key-backlinks)))
+      (progn
+        (insert (format "\n\n* %d Cites\n"
+                        (length key-backlinks)))
+        (dolist (group grouped-backlinks)
+          (let ((file-from (car group))
+                (bls (cdr group)))
+            (insert (format "** [[file:%s][%s]]\n"
+                            file-from
+                            (org-roam--get-title-or-slug file-from)))
+            (dolist (backlink bls)
+              (pcase-let ((`(,file-from _ ,props) backlink))
+                (insert (propertize
+                         (s-trim (s-replace "\n" " "
+                                            (plist-get props :content)))
+                         'font-lock-face 'org-roam-backlink
+                         'help-echo "mouse-1: visit backlinked note"
+                         'file-from file-from
+                         'file-from-point (plist-get props :point)))
+                (insert "\n\n"))))))
+    (insert "\n\n* No cites!")))
+
 (defun org-roam-update (file-path)
   "Show the cite-backlinks for given org file for file at `FILE-PATH'."
   (org-roam-db--ensure-built)
@@ -626,53 +679,8 @@ for Org-ref cite links."
           (setq org-return-follows-link t)
           (insert
            (propertize buffer-title 'font-lock-face 'org-document-title))
-          (if-let* ((file-backlinks (org-roam--get-backlinks file-path))
-                    (grouped-backlinks (--group-by (nth 0 it) file-backlinks)))
-              (progn
-                (insert (format "\n\n* %d Backlinks\n"
-                                (length file-backlinks)))
-                (dolist (group grouped-backlinks)
-                  (let ((file-from (car group))
-                        (bls (cdr group)))
-                    (insert (format "** [[file:%s][%s]]\n"
-                                    file-from
-                                    (org-roam--get-title-or-slug file-from)))
-                    (dolist (backlink bls)
-                      (pcase-let ((`(,file-from _ ,props) backlink))
-                        (insert (propertize
-                                 (s-trim (s-replace "\n" " "
-                                                    (plist-get props :content)))
-                                 'font-lock-face 'org-roam-backlink
-                                 'help-echo "mouse-1: visit backlinked note"
-                                 'file-from file-from
-                                 'file-from-point (plist-get props :point)))
-                        (insert "\n\n"))))))
-            (insert "\n\n* No backlinks!"))
-          (if-let* ((roam-key (with-temp-buffer
-                                (insert-file-contents file-path)
-                                (org-roam--extract-ref)))
-                    (key-backlinks (org-roam--get-backlinks (s-chop-prefix "cite:" roam-key)))
-                    (grouped-backlinks (--group-by (nth 0 it) key-backlinks)))
-              (progn
-                (insert (format "\n\n* %d Cites\n"
-                                (length key-backlinks)))
-                (dolist (group grouped-backlinks)
-                  (let ((file-from (car group))
-                        (bls (cdr group)))
-                    (insert (format "** [[file:%s][%s]]\n"
-                                    file-from
-                                    (org-roam--get-title-or-slug file-from)))
-                    (dolist (backlink bls)
-                      (pcase-let ((`(,file-from _ ,props) backlink))
-                        (insert (propertize
-                                 (s-trim (s-replace "\n" " "
-                                                    (plist-get props :content)))
-                                 'font-lock-face 'org-roam-backlink
-                                 'help-echo "mouse-1: visit backlinked note"
-                                 'file-from file-from
-                                 'file-from-point (plist-get props :point)))
-                        (insert "\n\n"))))))
-            (insert "\n\n* No cites!")))
+          (org-roam--buffer-insert-backlinks file-path)
+          (org-roam--buffer-insert-citelinks file-path))
         (read-only-mode 1)))))
 
 (cl-defun org-roam--maybe-update-buffer (&key redisplay)
