@@ -61,7 +61,7 @@
 
     ;; Cache
     (expect (caar (org-roam-db-query [:select (funcall count) :from files])) :to-be 8)
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links])) :to-be 5)
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links])) :to-be 5)
     (expect (caar (org-roam-db-query [:select (funcall count) :from titles])) :to-be 8)
     (expect (caar (org-roam-db-query [:select (funcall count) :from titles
                                               :where titles :is-null])) :to-be 2)
@@ -69,23 +69,23 @@
 
     ;; TODO Test files
 
-    ;; Links -- File-from
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links
-                                              :where (= file-from $s1)]
+    ;; Links
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 1)
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links
-                                              :where (= file-from $s1)]
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "nested/bar.org"))) :to-be 2)
 
     ;; Links -- File-to
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links
-                                              :where (= file-to $s1)]
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links
+                                              :where (= to $s1)]
                                      (org-roam-test-abs-path "nested/foo.org"))) :to-be 1)
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links
-                                              :where (= file-to $s1)]
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links
+                                              :where (= to $s1)]
                                      (org-roam-test-abs-path "nested/bar.org"))) :to-be 1)
-    (expect (caar (org-roam-db-query [:select (funcall count) :from file-links
-                                              :where (= file-to $s1)]
+    (expect (caar (org-roam-db-query [:select (funcall count) :from links
+                                              :where (= to $s1)]
                                      (org-roam-test-abs-path "unlinked.org"))) :to-be 0)
     ;; TODO Test titles
     (expect (org-roam-db-query [:select * :from titles])
@@ -171,20 +171,20 @@
                                               :where (= file $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0)
     (expect (caar (org-roam-db-query [:select (funcall count)
-                                              :from file-links
-                                              :where (= file-from $s1)]
+                                              :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0)
 
     ;; Cache should be updated
-    (expect (org-roam-db-query [:select [file-to]
-                                        :from file-links
-                                        :where (= file-from $s1)]
+    (expect (org-roam-db-query [:select [to]
+                                        :from links
+                                        :where (= from $s1)]
                                (org-roam-test-abs-path "new_foo.org"))
             :to-have-same-items-as
             (list (list (org-roam-test-abs-path "bar.org"))))
-    (expect (org-roam-db-query [:select [file-from]
-                                        :from file-links
-                                        :where (= file-to $s1)]
+    (expect (org-roam-db-query [:select [from]
+                                        :from links
+                                        :where (= to $s1)]
                                (org-roam-test-abs-path "new_foo.org"))
             :to-have-same-items-as
             (list (list (org-roam-test-abs-path "nested/bar.org"))))
@@ -209,20 +209,20 @@
                                               :where (= file $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0)
     (expect (caar (org-roam-db-query [:select (funcall count)
-                                              :from file-links
-                                              :where (= file-from $s1)]
+                                              :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0)
 
     ;; Cache should be updated
-    (expect (org-roam-db-query [:select [file-to]
-                                        :from file-links
-                                        :where (= file-from $s1)]
+    (expect (org-roam-db-query [:select [to]
+                                        :from links
+                                        :where (= from $s1)]
                                (org-roam-test-abs-path "foo with spaces.org"))
             :to-have-same-items-as
             (list (list (org-roam-test-abs-path "bar.org"))))
-    (expect (org-roam-db-query [:select [file-from]
-                                        :from file-links
-                                        :where (= file-to $s1)]
+    (expect (org-roam-db-query [:select [from]
+                                        :from links
+                                        :where (= to $s1)]
                                (org-roam-test-abs-path "foo with spaces.org"))
             :to-have-same-items-as
             (list (list (org-roam-test-abs-path "nested/bar.org"))))
@@ -239,12 +239,12 @@
                  (org-roam-test-abs-path "meaningful-title.org"))
     ;; File has no forward links
     (expect (caar (org-roam-db-query [:select (funcall count)
-                                              :from file-links
-                                              :where (= file-from $s1)]
+                                              :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "no-title.org"))) :to-be 0)
     (expect (caar (org-roam-db-query [:select (funcall count)
-                                              :from file-links
-                                              :where (= file-from $s1)]
+                                              :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "meaningful-title.org"))) :to-be 1)
 
     ;; Links are updated with the appropriate name
@@ -292,8 +292,8 @@
                                               :where (= file $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0)
     (expect (caar (org-roam-db-query [:select (funcall count)
-                                              :from file-links
-                                              :where (= file-from $s1)]
+                                              :from links
+                                              :where (= from $s1)]
                                      (org-roam-test-abs-path "foo.org"))) :to-be 0))
 
   (it "delete web_ref"
